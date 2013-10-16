@@ -1,0 +1,9 @@
+jonah:
+    build: .
+    links:
+        - riak
+    ports:
+        - 8080:80
+
+riak:
+    image: werner/riak

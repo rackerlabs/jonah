@@ -1,0 +1,158 @@
+<!DOCTYPE HTML>
+<html ng-app="jonah">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap.min.css">
+    <link rel="stylesheet" href="//netdna.bootstrapcdn.com/bootstrap/3.1.0/css/bootstrap-theme.min.css">
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/angularjs/1.0.8/angular.min.js"></script>
+    <title></title>
+</head>
+
+<body style="padding-top: 50px">
+
+    <div class="navbar navbar-inverse navbar-fixed-top">
+        <div class="container">
+            <a class="navbar-brand" href="#">Jonah</a>
+            <div class="navbar-inner">
+                <div class="container">
+                    <form class="form-group pull-right">
+                        <input type="text" ng-model="search" class="form-control" placeholder="Search"/>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div ng-controller="Controller" data-ng-init="init()" class="container" style="width:1200px">
+
+        <div class="row">
+            <div class="span12">
+                <table class="table table-striped">
+                    <tr>
+                        <td>
+                            <div class="input-group">
+                                <span class="input-group-addon">Version:</span>
+                                <select id="version" ng-model="version" ng-options="version for version in versions" class="form-control ng-valid ng-dirty"></select>
+                            </div>
+
+                        </td>
+                        <td>
+                            <div class="input-group">
+                                <span class="input-group-addon">Tag:</span>
+                                <input type="text" ng-model="tag" placeholder="Tag" class="form-control ng-valid ng-dirty"/>
+                            </div>
+                        </td>
+                        <td>
+                            <button ng-click="create()" class="btn btn-success">Create</button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+        </div>
+
+        <alert ng-repeat="alert in alerts" type="alert.type" close="closeAlert($index)">{{alert.msg}}</alert>
+
+        <accordion close-others="false">
+
+            <accordion-group heading="{{application.tag}}" ng-repeat="application in applications | filter:search">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>tag</th>
+                            <th>version</th>
+                            <th>service api</th>
+                            <th>admin api</th>
+                            <th>postgres</th>
+                            <th>logs</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td>{{application.tag}}</td>
+                            <td>{{application.version}}</td>
+                            <td><a href="http://{{location}}:{{application.keystone.ports.5000}}" target="_blank">http://{{location}}:{{application.keystone.ports.5000}}</a></td>
+                            <td><a href="http://{{location}}:{{application.keystone.ports.35357}}" target="_blank">http://{{location}}:{{application.keystone.ports.35357}}</a></td>
+                            <td><a href="http://{{location}}:{{application.postgres.ports.5432}}" target="_blank">sql://{{location}}:{{application.postgres.ports.5432}}</a></td>
+                            <td>
+                                <a href="/jonah/hosts/{{application.keystone.hostname}}/log" target="_blank">keystone</a>
+                                <a href="/jonah/hosts/{{application.postgres.hostname}}/log" target="_blank">postgres</a>
+                            </td>
+                            <td><button ng:click="delete($index)" class="btn btn-danger">delete</button></td>
+                        </tr>
+                    </tbody>
+                </table>
+            </accordion-group>
+
+        </accordion>
+
+    </div>
+
+    <script src="http://code.jquery.com/jquery.js"></script>
+    <script src="//netdna.bootstrapcdn.com/bootstrap/3.1.0/js/bootstrap.min.js"></script>
+    <script src="static/ui-bootstrap-tpls-0.10.0.min.js"></script>
+    <script type="text/javascript">
+    angular.module('jonah', ['ui.bootstrap']);
+
+    function Controller($scope, $http, $location) {
+
+        $scope.location = null;
+        $scope.versions = [];
+        $scope.version = null;
+        $scope.applications = [];
+        $scope.tag = 'tag'
+        $scope.alerts = [];
+
+        $scope.init = function() {
+            $scope.location = $location.host();
+            $http.get('/jonah/versions').success(function(data) {
+                $scope.versions = data;
+                $scope.version = $scope.versions[0];
+            });
+
+            $http.get('/jonah/apps').success(function(apps) {
+                apps.map(function(app) {
+                    $http.get('/jonah/apps/' + app).success(function(data) {
+                        $scope.applications.push(data);
+                    });
+                });
+
+
+            });
+        };
+
+        $scope.create = function() {
+            $scope.alerts.push({msg: 'Creating: ' + $scope.tag});
+            request = {
+                'version': $scope.version,
+                'tag': $scope.tag
+            };
+            $http.post('/jonah/apps', request)
+            .success(function(data) {
+                $scope.alerts.push({type: 'success', msg: 'Created: ' + $scope.tag});
+                $scope.applications.push(data);
+            })
+            .error(function(data) {
+                $scope.alerts.push({type: 'danger', msg: 'Could not create: ' + data});
+            });
+        };
+
+        $scope.delete = function(index) {
+            application = $scope.applications[index];
+            $scope.alerts.push({msg: 'Deleting: ' + application.tag});
+            $http.delete('/jonah/apps/' + application.id).success(function(data) {
+                $scope.alerts.push({type: 'success', msg: 'Deleted: ' + application.tag});
+                $scope.applications.splice(index, 1);
+            })
+            .error(function(data) {
+                $scope.alerts.push({type: 'danger', msg: 'Could not delete: ' + data});
+            });
+
+        };
+
+        $scope.closeAlert = function(index) {
+            $scope.alerts.splice(index, 1);
+        };
+    };
+    </script>
+</body>
+</html>
