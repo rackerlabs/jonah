@@ -27,6 +27,7 @@ sed -i -e s,_RIAK_ADDR,$RIAK_ADDR,g -e s,_RIAK_PORT,$RIAK_PORT,g -e s,_DOCKER_HO
 (cd keystone && git pull)
 
 service nginx start
+ln -s /proc/self/fd /dev/fd
 service uwsgi start
 
 chown www-data:www-data /var/www/jonah/files
