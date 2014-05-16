@@ -1,5 +1,5 @@
 jonah:
-    image: .
+    build: .
     links:
         - riak
     ports:
