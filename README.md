@@ -41,7 +41,7 @@ docker pull werner/jonah
 To run the latest version on port 8080:
 
 ```
-pip intall fig
+pip install fig
 fig up
 ```
 
